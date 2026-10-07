@@ -1,32 +1,20 @@
 import React, { useEffect, useState } from 'react'
 import { NavLink, useParams, useNavigate } from 'react-router-dom';
 
-export default function InsertProduct() {
+export default function UpdateProduct() {
     const [productName, setProductName] = useState("");
-    const [productPrice, setProductPrice] = useState();
-    const [productBarcode, setProductBarcode] = useState();
+    const [productPrice, setProductPrice] = useState("");
+    const [productBarcode, setProductBarcode] = useState("");
     const [loading, setLoading] = useState(false);
+    const [fetching, setFetching] = useState(true);
     const [error, setError] = useState("");
-    const navigate = useNavigate("");
-
-    const setName = (e) => {
-        setProductName(e.target.value);
-      };
-    
-      const setPrice = (e) => {
-        setProductPrice(e.target.value);
-      };
-    
-      const setBarcode = (e) => {
-        const value = e.target.value.slice(0, 12);
-        setProductBarcode(value);
-    };
-
-    const {id} = useParams("");
+    const navigate = useNavigate();
+    const { id } = useParams();
 
     useEffect(() => {
         const getProduct = async () => {
           try {
+            setFetching(true);
             const res = await fetch(`http://localhost:3001/products/${id}`, {
               method: "GET",
               headers: {
@@ -37,15 +25,17 @@ export default function InsertProduct() {
             const data = await res.json();
       
             if (res.status === 201) {
-              console.log("Data Retrieved.");
               setProductName(data.ProductName);
               setProductPrice(data.ProductPrice);
               setProductBarcode(data.ProductBarcode);
             } else {
-              console.log("Something went wrong. Please try again.");
+              setError("Failed to retrieve product details.");
             }
           } catch (err) {
             console.log(err);
+            setError("Error fetching product data.");
+          } finally {
+            setFetching(false);
           }
         };
       
@@ -56,7 +46,7 @@ export default function InsertProduct() {
         e.preventDefault();
 
         if (!productName || !productPrice || !productBarcode) {
-            setError("*Please fill in all the required fields.");
+            setError("Please fill in all required fields.");
             return;
         }
 
@@ -69,17 +59,16 @@ export default function InsertProduct() {
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ "ProductName": productName, "ProductPrice": productPrice, "ProductBarcode": productBarcode })
+                body: JSON.stringify({ "ProductName": productName, "ProductPrice": Number(productPrice), "ProductBarcode": Number(productBarcode) })
             });
 
             await response.json();
 
             if (response.status === 201) {
-                alert("Data Updated");
                 navigate('/products');
             }
             else {
-                setError("Something went wrong. Please try again.");
+                setError("Something went wrong updating product.");
             }
         } catch (err) {
             setError("An error occurred. Please try again later.");
@@ -90,26 +79,102 @@ export default function InsertProduct() {
     }
 
     return (
-        <div className='container-fluid p-5'>
-            <h1 className=''>Enter Product Information</h1>
-            <div className="mt-5 col-lg-6 col-md-6 col-12">
-                <label htmlFor="product_name" className="form-label fs-4 fw-bold">Product Name</label>
-                <input type="text" onChange={setName} value={productName} className="form-control fs-5" id="product_name" placeholder="Enter Product Name" required />
-            </div>
-            <div className="mt-3 col-lg-6 col-md-6 col-12">
-                <label htmlFor="product_price" className="form-label fs-4 fw-bold">Product Price</label>
-                <input type="number" onChange={setPrice} value={productPrice} className="form-control fs-5" id="product_price" placeholder="Enter Product Price" required />
-            </div>
-            <div className="mt-3 mb-5 col-lg-6 col-md-6 col-12">
-                <label htmlFor="product_barcode" className="form-label fs-4 fw-bold">Product Barcode</label>
-                <input type="number" onChange={setBarcode} value={productBarcode} maxLength={12} className="form-control fs-5" id="product_barcode" placeholder="Enter Product Barcode" required />
-            </div>
-            <div className='d-flex justify-content-center col-lg-6 col-md-6'>
-                <NavLink to="/products" className='btn btn-primary me-5 fs-4'>Cancel</NavLink>
-                <button type="submit" onClick={updateProduct} className="btn btn-primary fs-4" disabled={loading}>{loading ? 'Updating...' : 'Update'}</button>
-            </div>
-            <div className="col text-center col-lg-6 ">
-                {error && <div className="text-danger mt-3 fs-5 fw-bold">{error}</div>}
+        <div className="container py-5">
+            <div className="row justify-content-center">
+                <div className="col-md-8 col-lg-6">
+                    <div className="custom-card p-4 p-md-5">
+                        <div className="text-center mb-4">
+                            <div className="stat-icon-wrapper icon-purple mx-auto mb-3">
+                                <i className="fa-solid fa-pen-to-square"></i>
+                            </div>
+                            <h3 className="fw-bold mb-1">Update Product</h3>
+                            <p className="text-muted small">Modify details for item ID: <code className="text-primary">{id}</code></p>
+                        </div>
+
+                        {error && (
+                            <div className="alert alert-danger d-flex align-items-center gap-2 mb-4 rounded-3 py-2 px-3 small" role="alert">
+                                <i className="fa-solid fa-circle-exclamation fs-6"></i>
+                                <div>{error}</div>
+                            </div>
+                        )}
+
+                        {fetching ? (
+                            <div className="text-center py-4">
+                                <div className="spinner-border text-primary" role="status"></div>
+                                <p className="text-muted mt-2 small">Loading product info...</p>
+                            </div>
+                        ) : (
+                            <form onSubmit={updateProduct}>
+                                <div className="mb-3">
+                                    <label htmlFor="product_name" className="form-label fw-semibold text-muted small">PRODUCT NAME</label>
+                                    <div className="input-group">
+                                        <span className="input-group-text bg-light text-muted"><i className="fa-solid fa-tag"></i></span>
+                                        <input 
+                                            type="text" 
+                                            onChange={(e) => setProductName(e.target.value)} 
+                                            value={productName} 
+                                            className="form-control" 
+                                            id="product_name" 
+                                            placeholder="Enter Product Name" 
+                                            required 
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="mb-3">
+                                    <label htmlFor="product_price" className="form-label fw-semibold text-muted small">UNIT PRICE ($)</label>
+                                    <div className="input-group">
+                                        <span className="input-group-text bg-light text-muted"><i className="fa-solid fa-dollar-sign"></i></span>
+                                        <input 
+                                            type="number" 
+                                            step="0.01"
+                                            onChange={(e) => setProductPrice(e.target.value)} 
+                                            value={productPrice} 
+                                            className="form-control" 
+                                            id="product_price" 
+                                            placeholder="Enter Product Price" 
+                                            required 
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="mb-4">
+                                    <label htmlFor="product_barcode" className="form-label fw-semibold text-muted small">BARCODE NUMBER</label>
+                                    <div className="input-group">
+                                        <span className="input-group-text bg-light text-muted"><i className="fa-solid fa-barcode"></i></span>
+                                        <input 
+                                            type="number" 
+                                            onChange={(e) => setProductBarcode(e.target.value.slice(0, 12))} 
+                                            value={productBarcode} 
+                                            className="form-control" 
+                                            id="product_barcode" 
+                                            placeholder="Enter Barcode Number" 
+                                            required 
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="d-flex gap-3 pt-2">
+                                    <NavLink to="/products" className="btn btn-outline-secondary rounded-pill w-50 py-2 fw-semibold">
+                                        Cancel
+                                    </NavLink>
+                                    <button type="submit" className="btn btn-primary btn-hover-lift rounded-pill w-50 py-2 fw-bold d-inline-flex align-items-center justify-content-center gap-2" disabled={loading}>
+                                        {loading ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm" role="status"></span>
+                                                Updating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <i className="fa-solid fa-floppy-disk"></i> Save Changes
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     )
